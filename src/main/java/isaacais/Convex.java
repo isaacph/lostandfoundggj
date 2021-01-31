@@ -11,6 +11,8 @@ public abstract class Convex {
     public abstract Vector2f[] points();
     public abstract Vector2f[] axes();
     public abstract Convex add(Vector2f displacement);
+    public abstract Vector2f getCenter();
+    public abstract void move(float x, float y);
 
     public Shadow shadow(Vector2f axis) {
         return project(axis, points());

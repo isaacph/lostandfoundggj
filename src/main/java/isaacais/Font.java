@@ -2,7 +2,6 @@ package isaacais;
 
 import org.joml.Matrix4f;
 import org.joml.Vector4f;
-import org.lwjgl.BufferUtils;
 import org.lwjgl.stb.*;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
@@ -13,10 +12,6 @@ import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Scanner;
 
 import static org.lwjgl.opengl.GL20.*;
 import static org.lwjgl.opengl.GL30.*;
@@ -55,7 +50,7 @@ public class Font {
         glLinkProgram(shader);
         Shader.checkLinking("font " + source, shader);
         glUseProgram(shader);
-        Main.checkGLError("Error using font program " + shader + " path: " + source);
+        Game.checkGLError("Error using font program " + shader + " path: " + source);
         glDeleteShader(vertex);
         glDeleteShader(fragment);
 
@@ -149,7 +144,7 @@ public class Font {
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-                Main.checkGLError("Texture " + source);
+                Game.checkGLError("Texture " + source);
                 this.texture = tex;
             }
 
@@ -201,7 +196,7 @@ public class Font {
             System.err.println("Error loading font " + source);
             e.printStackTrace();
         }
-        Main.checkGLError("Font init " + source);
+        Game.checkGLError("Font init " + source);
     }
 
     public void draw(String text, float x, float y, Matrix4f proj) {

@@ -1,7 +1,6 @@
 package isaacais;
 
 import org.joml.Matrix4f;
-import org.joml.Vector2i;
 import org.joml.Vector4f;
 import org.lwjgl.system.MemoryStack;
 
@@ -57,11 +56,11 @@ public class FloorRenderer {
         glUseProgram(programMask);
         glDeleteShader(vert);
         glDeleteShader(frag);
-        Main.checkGLError("floor shader init");
+        Game.checkGLError("floor shader init");
         uniformsMask = Shader.initUniformList();
         uniformsMask[MATRIX.num] = glGetUniformLocation(programMask, "matrix");
         uniformsMask[COLOR.num] = glGetUniformLocation(programMask, "color");
-        Main.checkGLError("floor shader init");
+        Game.checkGLError("floor shader init");
     }
 
     public void build(Floor.Group floors) {
@@ -86,7 +85,7 @@ public class FloorRenderer {
                 render.floorVertCount = this.buildFloor(floor);
                 glEnableVertexAttribArray(Shader.Attribute.POSITION.num);
                 glVertexAttribPointer(Shader.Attribute.POSITION.num, 2, GL_FLOAT, false, 2 * 4, 0);
-                Main.checkGLError("floor buffer init");
+                Game.checkGLError("floor buffer init");
 
                 render.floorVao = vao;
                 render.floorVbo = vbo;
@@ -102,7 +101,7 @@ public class FloorRenderer {
                 glVertexAttribPointer(Shader.Attribute.POSITION.num, 2, GL_FLOAT, false, 4 * 4, 0);
                 glEnableVertexAttribArray(Shader.Attribute.TEXTURE.num);
                 glVertexAttribPointer(Shader.Attribute.TEXTURE.num, 2, GL_FLOAT, false, 4 * 4, 2 * 4);
-                Main.checkGLError("wall buffer init");
+                Game.checkGLError("wall buffer init");
 
                 render.wallVao = vao;
                 render.wallVbo = vbo;
@@ -112,7 +111,7 @@ public class FloorRenderer {
             this.floorRender[floorIndex] = render;
             floorIndex++;
         }
-        Main.checkGLError("build loop");
+        Game.checkGLError("build loop");
     }
 
     private int buildWall(Floor floor) {
@@ -188,13 +187,13 @@ public class FloorRenderer {
             glUniform1i(texRender.uniforms[SAMPLER.num], 0);
             for(int i = 0; i < floorRender.length; ++i) {
                 FloorRendering render = floorRender[i];
-                glUniformMatrix4fv(texRender.uniforms[MATRIX.num], false, new Matrix4f(matrix).mul(render.floorRef.getMatrix()).get(buffer));
+                glUniformMatrix4fv(texRender.uniforms[MATRIX.num], false, new Matrix4f(matrix).mul(render.floorRef.getMatrix()).scale(1.0001f).get(buffer));
                 glBindVertexArray(render.wallVao);
                 glDrawArrays(GL_TRIANGLES, 0, render.wallVertCount);
                 buffer.clear();
             }
         }
-        Main.checkGLError("draw loop");
+        Game.checkGLError("draw loop");
     }
 
     public void destroy() {
@@ -205,7 +204,7 @@ public class FloorRenderer {
             }
         }
         glDeleteProgram(programMask);
-        Main.checkGLError("texture cleanup");
+        Game.checkGLError("texture cleanup");
     }
 
     private int buildFloor(Floor floor) {

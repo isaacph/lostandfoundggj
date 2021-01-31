@@ -40,7 +40,7 @@ public class TextureRenderer {
         glUseProgram(program);
         glDeleteShader(vert);
         glDeleteShader(frag);
-        Main.checkGLError("texture shader init");
+        Game.checkGLError("texture shader init");
         uniforms = Shader.initUniformList();
         uniforms[MATRIX.num] = glGetUniformLocation(program, "matrix");
         uniforms[COLOR.num] = glGetUniformLocation(program, "color");
@@ -56,7 +56,7 @@ public class TextureRenderer {
         glVertexAttribPointer(Shader.Attribute.POSITION.num, 2, GL_FLOAT, false, 4 * 4, 0);
         glEnableVertexAttribArray(Shader.Attribute.TEXTURE.num);
         glVertexAttribPointer(Shader.Attribute.TEXTURE.num, 2, GL_FLOAT, false, 4 * 4, 2 * 4);
-        Main.checkGLError("texture buffer init");
+        Game.checkGLError("texture buffer init");
     }
     public TextureRenderer() {
         this(1);
@@ -78,6 +78,6 @@ public class TextureRenderer {
         glDeleteBuffers(vbo);
         glDeleteVertexArrays(vao);
         glDeleteProgram(program);
-        Main.checkGLError("texture cleanup");
+        Game.checkGLError("texture cleanup");
     }
 }

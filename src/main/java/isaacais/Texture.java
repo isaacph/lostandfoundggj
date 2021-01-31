@@ -63,7 +63,7 @@ public class Texture {
             glGenerateMipmap(GL_TEXTURE_2D);
             MemoryUtil.memFree(data);
             STBImage.stbi_image_free(bitmap);
-            Main.checkGLError("Load image " + path);
+            Game.checkGLError("Load image " + path);
         }
     }
 

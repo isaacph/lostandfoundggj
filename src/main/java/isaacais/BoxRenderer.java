@@ -39,7 +39,7 @@ public class BoxRenderer {
         glUseProgram(program);
         glDeleteShader(vert);
         glDeleteShader(frag);
-        Main.checkGLError("simple shader init");
+        Game.checkGLError("simple shader init");
         uniforms = Shader.initUniformList();
         uniforms[MATRIX.num] = glGetUniformLocation(program, "matrix");
         uniforms[COLOR.num] = glGetUniformLocation(program, "color");
@@ -52,7 +52,7 @@ public class BoxRenderer {
         glBufferData(GL_ARRAY_BUFFER, TRIANGLES, GL_STATIC_DRAW);
         glEnableVertexAttribArray(Shader.Attribute.POSITION.num);
         glVertexAttribPointer(Shader.Attribute.POSITION.num, 2, GL_FLOAT, false, 2 * 4, 0);
-        Main.checkGLError("simple buffer init");
+        Game.checkGLError("simple buffer init");
     }
 
     public void draw(Matrix4f matrix, Vector4f color) {
@@ -70,6 +70,6 @@ public class BoxRenderer {
         glDeleteBuffers(vbo);
         glDeleteVertexArrays(vao);
         glDeleteProgram(program);
-        Main.checkGLError("simple cleanup");
+        Game.checkGLError("simple cleanup");
     }
 }

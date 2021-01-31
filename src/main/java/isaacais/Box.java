@@ -61,6 +61,15 @@ public class Box extends Convex{
         };
     }
 
+    public Vector2f getCenter() {
+        return new Vector2f(x, y);
+    }
+
+    public void move(float x, float y) {
+        this.x += x;
+        this.y += y;
+    }
+
     @Override
     public Convex add(Vector2f displacement) {
         Box b = new Box(this);
