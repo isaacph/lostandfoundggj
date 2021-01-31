@@ -432,7 +432,7 @@ public class Game {
                     } else if(glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS) {
                         loadLevel("level2.dat");
                     } else if(glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS) {
-                        loadLevel("level1.dat");
+                        loadLevel("level3.dat");
                     }
                 }
             }
