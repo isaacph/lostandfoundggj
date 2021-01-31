@@ -45,6 +45,9 @@ public class SoundPlayer {
         checkError("Init AL");
 
         addSound(Sound.MUSIC, Util.PATH_PREFIX + "music.ogg");
+        addSound(Sound.COLLECT, Util.PATH_PREFIX + "GameJam_CollectToy.ogg");
+        addSound(Sound.DIE, Util.PATH_PREFIX + "GameJam_HitByRoomba.ogg");
+        addSound(Sound.SPOTTED, Util.PATH_PREFIX + "GameJam_SpottedByRoomba.ogg");
 
         alGenSources(sources);
 

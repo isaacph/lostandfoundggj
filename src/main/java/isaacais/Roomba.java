@@ -86,6 +86,7 @@ public class Roomba extends TextureGameObject {
             if(playerCollideCooldown <= 0 && game.player.getCollider().getCenter().distance(this.getCollider().getCenter()) < 2.5f) {
                 this.status = Status.CHASING;
                 this.destination = null;
+                game.soundPlayer.play(Sound.SPOTTED);
             }
         } else {
             if(playerCollideCooldown <= 0) {

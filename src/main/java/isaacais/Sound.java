@@ -2,5 +2,5 @@ package isaacais;
 
 public enum Sound {
 
-    NONE, MUSIC
+    NONE, MUSIC, COLLECT, DIE, SPOTTED
 }

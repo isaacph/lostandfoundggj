@@ -7,6 +7,7 @@ import org.joml.Vector4f;
 import org.lwjgl.glfw.*;
 import org.lwjgl.opengl.*;
 
+import java.text.DecimalFormat;
 import java.util.*;
 
 import static org.lwjgl.glfw.Callbacks.*;
@@ -26,14 +27,20 @@ public class Game {
     private BoxRenderer boxRender;
     private TextureRenderer texRender;
     private FloorRenderer floorRender;
+    private SpriteRenderer spriteRender;
     private Texture scrap;
-    private Texture kid;
     private Texture roomba;
     private Texture sofa;
     private Texture alien;
     private Texture bunny;
     private Texture duck;
+    private Texture kid;
+    private Texture sink;
+    private Texture oven;
+    private Texture fridge;
     private Font font;
+    private Font fontBig;
+    private Font fontSmall;
 
     public ArrayList<GameObject> gameObjects;
     public Player player;
@@ -49,6 +56,13 @@ public class Game {
     public Vector2f playerStart;
 
     public SoundPlayer soundPlayer;
+
+    private OverlayMode currentOverlay = OverlayMode.NONE;
+    private double gameTimer;
+
+    private enum OverlayMode {
+        NONE, DEFEAT, VICTORY
+    }
 
     public List<GameObject> getObjectsInTiles(Vector2i min, Vector2i max) {
         Box box = new Box((min.x + max.x + 1) / 2.0f, (min.y + max.y + 1) / 2.0f, (max.x - min.x + 1) - 0.001f, (max.y - min.y + 1) - 0.001f);
@@ -83,6 +97,7 @@ public class Game {
     }
 
     public void initGameObjects() {
+        gameTimer = 0;
         toysRequired = floors.toysRequired;
         toysPossessed = 0;
         selectedGameObject = null;
@@ -90,7 +105,7 @@ public class Game {
         gameObjectDataMap = new HashMap<>();
         playerStart = null;
         Player oldPlayer = player;
-        player = new Player(texRender, kid, new Vector2f(0));
+        player = new Player(spriteRender, new Vector2f(0));
         if(oldPlayer != null) {
             player.getCollider().move(oldPlayer.getCollider().getCenter().x - player.getCollider().getCenter().x,
                 oldPlayer.getCollider().getCenter().y - player.getCollider().getCenter().y);
@@ -136,6 +151,27 @@ public class Game {
                 }
             } else if(entity.type == Floor.EntityType.PLAYER.val) {
                 playerStart = entity.position;
+            } else if(entity.type == Floor.EntityType.SINK.val) {
+                TextureGameObject tgo = new TextureGameObject(texRender, sink,
+                    new Box(entity.position.x, entity.position.y, 3.2f, 0.8f),
+                    new Box(entity.position.x - 0.2f, entity.position.y - 0.8f, 5),
+                    0.25f);
+                gameObjects.add(tgo);
+                gameObjectDataMap.put(tgo, entity);
+            } else if(entity.type == Floor.EntityType.OVEN.val) {
+                TextureGameObject tgo = new TextureGameObject(texRender, oven,
+                    new Box(entity.position.x, entity.position.y, 0.01f, 0.01f),
+                    new Box(entity.position.x + 0.1f, entity.position.y, 2),
+                    0.25f);
+                gameObjects.add(tgo);
+                gameObjectDataMap.put(tgo, entity);
+            } else if(entity.type == Floor.EntityType.FRIDGE.val) {
+                TextureGameObject tgo = new TextureGameObject(texRender, fridge,
+                    new Box(entity.position.x, entity.position.y, 2.0f, 0.8f),
+                    new Box(entity.position.x, entity.position.y - 1.4f, 5),
+                    0.25f);
+                gameObjects.add(tgo);
+                gameObjectDataMap.put(tgo, entity);
             }
         }
     }
@@ -143,8 +179,23 @@ public class Game {
     public void initPlayer() {
         if(playerStart == null) playerStart = new Vector2f(0);
         gameObjects.remove(player);
-        player = new Player(texRender, kid, new Vector2f(playerStart));
+        player = new Player(spriteRender, new Vector2f(playerStart));
         gameObjects.add(player);
+    }
+
+    public void loadLevel(String resourcePath) {
+        updateGameObjects = true;
+        levelEdit = false;
+        {
+            Floor.Group f = Floor.fromResource(Util.PATH_PREFIX + resourcePath);
+            if (f != null) {
+                floors = f;
+                floorRender.build(floors);
+                initGameObjects();
+            }
+        }
+        initGameObjects();
+        initPlayer();
     }
 
     public void run() {
@@ -175,14 +226,20 @@ public class Game {
         boxRender = new BoxRenderer();
         texRender = new TextureRenderer();
         floorRender = new FloorRenderer();
+        spriteRender = new SpriteRenderer();
         scrap = new Texture(Util.PATH_PREFIX + "scrap.png");
-        kid = new Texture(Util.PATH_PREFIX + "kid.png");
         roomba = new Texture(Util.PATH_PREFIX + "roomba.png");
         sofa = new Texture(Util.PATH_PREFIX + "sofa.png");
         alien = new Texture(Util.PATH_PREFIX + "alien.png");
         bunny = new Texture(Util.PATH_PREFIX + "bunny.png");
         duck = new Texture(Util.PATH_PREFIX + "duck.png");
+        kid = new Texture(Util.PATH_PREFIX + "kid.png");
+        sink = new Texture(Util.PATH_PREFIX + "sink.png");
+        oven = new Texture(Util.PATH_PREFIX + "oven.png");
+        fridge = new Texture(Util.PATH_PREFIX + "fridge.png");
         font = new Font(Util.PATH_PREFIX + "font.ttf", 48, 512, 512);
+        fontBig = new Font(Util.PATH_PREFIX + "font.ttf", 80, 1024, 1024);
+        fontSmall = new Font(Util.PATH_PREFIX + "font.ttf", 28, 512, 256);
         console = new Console(font, boxRender);
 
         floors = new Floor.Group();
@@ -308,6 +365,42 @@ public class Game {
                             floors.entityData.add(entity);
                             initGameObjects();
                         }
+                        if (action == GLFW_PRESS && key == GLFW_KEY_6) {
+                            Floor.InitData entity = new Floor.InitData();
+                            entity.type = Floor.EntityType.SINK.val;
+                            entity.position = mouseWorld;
+                            floors.entityData.add(entity);
+                            initGameObjects();
+                        }
+                        if (action == GLFW_PRESS && key == GLFW_KEY_7) {
+                            Floor.InitData entity = new Floor.InitData();
+                            entity.type = Floor.EntityType.OVEN.val;
+                            entity.position = mouseWorld;
+                            floors.entityData.add(entity);
+                            initGameObjects();
+                        }
+                        if (action == GLFW_PRESS && key == GLFW_KEY_8) {
+                            Floor.InitData entity = new Floor.InitData();
+                            entity.type = Floor.EntityType.FRIDGE.val;
+                            entity.position = mouseWorld;
+                            floors.entityData.add(entity);
+                            initGameObjects();
+                        }
+                    }
+                } else if(!updateGameObjects) {
+                    if(glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
+                        updateGameObjects = true;
+                        initGameObjects();
+                        initPlayer();
+                        currentOverlay = OverlayMode.NONE;
+                    }
+                } else if(updateGameObjects) {
+                    if(glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS) {
+                        loadLevel("level1.dat");
+                    } else if(glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS) {
+                        loadLevel("level2.dat");
+                    } else if(glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS) {
+                        loadLevel("level1.dat");
                     }
                 }
             }
@@ -323,18 +416,7 @@ public class Game {
         console.println("hello world!");
         console.println("hello world!");
 
-        updateGameObjects = true;
-        levelEdit = false;
-        {
-            Floor.Group f = Floor.fromResource(Util.PATH_PREFIX + "level.dat");
-            if (f != null) {
-                floors = f;
-                floorRender.build(floors);
-                initGameObjects();
-            }
-        }
-        initGameObjects();
-        initPlayer();
+        loadLevel("level1.dat");
 
         double soundTimer = 3 * 60;
 
@@ -349,6 +431,11 @@ public class Game {
             glfwGetCursorPos(window, mx, my);
             mouseWorld = toWorldSpace(new Vector2f((float) mx[0], (float) my[0]));
 
+            soundPlayer.update((float) delta);
+
+            if(updateGameObjects) {
+                gameTimer += delta;
+            }
             soundTimer += delta;
             if(soundTimer > 2 * 60 + 12) {
                 soundTimer = 0;
@@ -457,6 +544,14 @@ public class Game {
                             object.getCollider().move(resolve.x, resolve.y);
                         }
                     }
+
+                    if(toysRequired <= toysPossessed) {
+                        updateGameObjects = false;
+                        currentOverlay = OverlayMode.VICTORY;
+                    } else if(player.fallTime <= 0 && player.fallen) {
+                        updateGameObjects = false;
+                        currentOverlay = OverlayMode.DEFEAT;
+                    }
                 } else {
                     if(levelEdit) {
                         player.update(timeStep, this);
@@ -541,6 +636,21 @@ public class Game {
                     texRender.draw(new Matrix4f(ortho).mul(view).translate(position.x, position.y, 0).rotate((float) Math.PI / 4.0f, 0, 0, 1).scale(1, 0.05f, 0), new Vector4f(1, 0, 0, 1));
                     texRender.draw(new Matrix4f(ortho).mul(view).translate(position.x, position.y, 0).rotate((float) -Math.PI / 4.0f, 0, 0, 1).scale(1, 0.05f, 0), new Vector4f(1, 0, 0, 1));
                 }
+            }
+
+            if(currentOverlay == OverlayMode.VICTORY) {
+                boxRender.draw(new Matrix4f(ortho).translate(pixelWidth / 2.0f, pixelHeight / 2.0f, 0)
+                    .scale(400), new Vector4f(1));
+                fontBig.draw("Victory!", pixelWidth / 2.0f - fontBig.textWidth("Victory!") / 2 + 16.0f, pixelHeight / 2.0f, new Matrix4f(ortho), new Vector4f(0, 0, 0, 1));
+                font.draw("Time: " + new DecimalFormat("0.00").format(gameTimer), pixelWidth / 2.0f - 80, pixelHeight / 2.0f + 50.0f, new Matrix4f(ortho), new Vector4f(0, 0, 0, 1));
+                fontSmall.draw("Press space to play again...", pixelWidth / 2.0f - fontSmall.textWidth("Press space to play again...") / 2.0f + 16.0f, pixelHeight / 2.0f + 160, new Matrix4f(ortho), new Vector4f(0, 0, 0, 1));
+            }
+            if(currentOverlay == OverlayMode.DEFEAT) {
+                boxRender.draw(new Matrix4f(ortho).translate(pixelWidth / 2.0f, pixelHeight / 2.0f, 0)
+                    .scale(400), new Vector4f(1));
+                fontBig.draw("Defeat!", pixelWidth / 2.0f - fontBig.textWidth("Defeat!") / 2 + 16.0f, pixelHeight / 2.0f, new Matrix4f(ortho), new Vector4f(0,0 ,0, 1));
+                font.draw("Time: " + new DecimalFormat("0.00").format(gameTimer), pixelWidth / 2.0f - 80, pixelHeight / 2.0f + 50.0f, new Matrix4f(ortho), new Vector4f(0, 0, 0, 1));font.draw("Time: " + new DecimalFormat("0.00").format(gameTimer), pixelWidth / 2.0f - 80, pixelHeight / 2.0f + 50.0f, new Matrix4f(ortho), new Vector4f(0, 0, 0, 1));
+                fontSmall.draw("Press space to play again...", pixelWidth / 2.0f - fontSmall.textWidth("Press space to play again...") / 2.0f + 16.0f, pixelHeight / 2.0f + 160, new Matrix4f(ortho), new Vector4f(0, 0, 0, 1));
             }
 
             {

@@ -64,9 +64,10 @@ public final class Shader {
         }
     }
 
-    public static int UNIFORM_COUNT = 3;
+    public static int UNIFORM_COUNT = 5;
     public enum Uniform {
-        MATRIX(0), COLOR(1), SAMPLER(2);
+        MATRIX(0), COLOR(1), SAMPLER(2),
+        SPRITE_POS(3), SPRITE_FRAME(4);
 
         public int num;
         Uniform(int position) {

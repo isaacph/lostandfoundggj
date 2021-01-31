@@ -107,7 +107,8 @@ public class Floor implements Serializable {
     }
 
     public enum EntityType {
-        NULL(0), PLAYER(1), ROOMBA(2), SOFA(3), TOY0(4), TOY1(5), TOY2(6);
+        NULL(0), PLAYER(1), ROOMBA(2), SOFA(3), TOY0(4), TOY1(5), TOY2(6),
+        SINK(7), OVEN(8), FRIDGE(9);
 
         public byte val;
         EntityType(int val) {
