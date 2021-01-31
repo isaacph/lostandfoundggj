@@ -9,6 +9,8 @@ import java.nio.file.Paths;
 import java.util.Scanner;
 
 public class Util {
+    public static final String PATH_PREFIX = "";
+
     public static String getFile(String path) throws IOException {
         BufferedReader reader = new BufferedReader(new InputStreamReader(Shader.class.getResourceAsStream(path)));
         StringBuilder b = new StringBuilder();

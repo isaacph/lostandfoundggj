@@ -17,11 +17,11 @@ public abstract class GameObject implements Comparable<GameObject> {
 
     public void update(double delta, Game game) {}
 
-    public void collide(GameObject other) {
+    public void collide(GameObject other, Game game) {
 
     }
 
-    public void collide(Box wall) {
+    public void collide(Box wall, Game game) {
 
     }
 
@@ -30,4 +30,7 @@ public abstract class GameObject implements Comparable<GameObject> {
     }
 
     public abstract Vector2f getCenter();
+    public boolean shouldDelete() {
+        return false;
+    }
 }

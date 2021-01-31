@@ -28,8 +28,8 @@ public class TextureRenderer {
             -0.5f, -0.5f, 0.0f, 0.0f
         };
 
-        int vert = Shader.createShader("../texturev.glsl", GL_VERTEX_SHADER);
-        int frag = Shader.createShader("../texturef.glsl", GL_FRAGMENT_SHADER);
+        int vert = Shader.createShader(Util.PATH_PREFIX + "texturev.glsl", GL_VERTEX_SHADER);
+        int frag = Shader.createShader(Util.PATH_PREFIX + "texturef.glsl", GL_FRAGMENT_SHADER);
         program = glCreateProgram();
         glAttachShader(program, vert);
         glAttachShader(program, frag);

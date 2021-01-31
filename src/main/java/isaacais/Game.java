@@ -30,16 +30,23 @@ public class Game {
     private Texture kid;
     private Texture roomba;
     private Texture sofa;
+    private Texture alien;
+    private Texture bunny;
+    private Texture duck;
     private Font font;
 
     public ArrayList<GameObject> gameObjects;
     public Player player;
-    public Player placeholderPlayer;
 
     public boolean updateGameObjects = false;
+    public boolean levelEdit = false;
 
     public GameObject selectedGameObject = null;
     public Map<GameObject, Floor.InitData> gameObjectDataMap;
+    public Console console;
+    public int toysRequired, toysPossessed;
+
+    public Vector2f playerStart;
 
     public List<GameObject> getObjectsInTiles(Vector2i min, Vector2i max) {
         Box box = new Box((min.x + max.x + 1) / 2.0f, (min.y + max.y + 1) / 2.0f, (max.x - min.x + 1) - 0.001f, (max.y - min.y + 1) - 0.001f);
@@ -74,22 +81,28 @@ public class Game {
     }
 
     public void initGameObjects() {
+        toysRequired = floors.toysRequired;
+        toysPossessed = 0;
         selectedGameObject = null;
         gameObjects = new ArrayList<>();
         gameObjectDataMap = new HashMap<>();
+        playerStart = null;
+        Player oldPlayer = player;
+        player = new Player(texRender, kid, new Vector2f(0));
+        if(oldPlayer != null) {
+            player.getCollider().move(oldPlayer.getCollider().getCenter().x - player.getCollider().getCenter().x,
+                oldPlayer.getCollider().getCenter().y - player.getCollider().getCenter().y);
+        }
         gameObjects.add(player);
         for(Floor.InitData entity : floors.entityData) {
             if(entity.type == Floor.EntityType.SOFA.val) {
                 TextureGameObject tgo = new TextureGameObject(texRender, sofa,
-                    new Box(entity.position.x, entity.position.y, 4, 1),
-                    new Box(entity.position.x, entity.position.y - 1, 5),
+                    new Box(entity.position.x, entity.position.y, 3.5f, 0.8f),
+                    new Box(entity.position.x, entity.position.y - 0.8f, 5),
                     0.25f);
                 gameObjects.add(tgo);
                 gameObjectDataMap.put(tgo, entity);
-            }
-        }
-        for(Floor.InitData entity : floors.entityData) {
-            if(entity.type == Floor.EntityType.ROOMBA.val) {
+            } else if(entity.type == Floor.EntityType.ROOMBA.val) {
                 Roomba.InitMetadata meta = null;
                 if(entity.metadata != null) {
                     try {
@@ -100,11 +113,36 @@ public class Game {
                         e.printStackTrace();
                     }
                 }
-                Roomba tgo = new Roomba(texRender, roomba, entity.position, meta);
+                Roomba tgo = new Roomba(texRender, roomba, new Vector2f(entity.position), meta);
                 gameObjects.add(tgo);
                 gameObjectDataMap.put(tgo, entity);
+            } else if(entity.type >= Floor.EntityType.TOY0.val && entity.type <= Floor.EntityType.TOY2.val) {
+                int toyNumber = entity.type - Floor.EntityType.TOY0.val;
+                Toy toy = null;
+                if(toyNumber == 0) {
+                    toy = new Toy(texRender, alien, new Vector2f(entity.position), new Vector2f(0.2f), new Vector2f(0), 0.5f, toyNumber);
+                } else if(toyNumber == 1) {
+                    toy = new Toy(texRender, bunny, new Vector2f(entity.position), new Vector2f(0.2f), new Vector2f(0), 0.5f, toyNumber);
+                } else if(toyNumber == 2) {
+                    toy = new Toy(texRender, duck, new Vector2f(entity.position), new Vector2f(0.2f), new Vector2f(0), 0.5f, toyNumber);
+                }
+                if(toy != null) {
+                    gameObjects.add(toy);
+                    gameObjectDataMap.put(toy, entity);
+                } else {
+                    System.err.println("Error: unidentified toy number " + toyNumber);
+                }
+            } else if(entity.type == Floor.EntityType.PLAYER.val) {
+                playerStart = entity.position;
             }
         }
+    }
+
+    public void initPlayer() {
+        if(playerStart == null) playerStart = new Vector2f(0);
+        gameObjects.remove(player);
+        player = new Player(texRender, kid, new Vector2f(playerStart));
+        gameObjects.add(player);
     }
 
     public void run() {
@@ -134,12 +172,15 @@ public class Game {
         boxRender = new BoxRenderer();
         texRender = new TextureRenderer();
         floorRender = new FloorRenderer();
-        scrap = new Texture("../scrap.png");
-        kid = new Texture("../kid.png");
-        roomba = new Texture("../roomba.png");
-        sofa = new Texture("../sofa.png");
-        font = new Font("../font.ttf", 48, 512, 512);
-        Console console = new Console(font, boxRender);
+        scrap = new Texture(Util.PATH_PREFIX + "scrap.png");
+        kid = new Texture(Util.PATH_PREFIX + "kid.png");
+        roomba = new Texture(Util.PATH_PREFIX + "roomba.png");
+        sofa = new Texture(Util.PATH_PREFIX + "sofa.png");
+        alien = new Texture(Util.PATH_PREFIX + "alien.png");
+        bunny = new Texture(Util.PATH_PREFIX + "bunny.png");
+        duck = new Texture(Util.PATH_PREFIX + "duck.png");
+        font = new Font(Util.PATH_PREFIX + "font.ttf", 48, 512, 512);
+        console = new Console(font, boxRender);
 
         floors = new Floor.Group();
         floors.setTile((byte) 1, 0, 0);
@@ -148,8 +189,6 @@ public class Game {
         floors.setTile((byte) 1, -1, -1);
         floorRender.build(floors);
         gameObjects = new ArrayList<>();
-        player = new Player(texRender, kid, new Vector2f(0, 0));
-        gameObjects.add(player);
         gameObjectDataMap = new HashMap<>();
 
         double[] mx = new double[1], my = new double[1];
@@ -174,75 +213,98 @@ public class Game {
                 }
             }
             if(!console.focus) {
-                if(action == GLFW_RELEASE && key == GLFW_KEY_GRAVE_ACCENT) {
-                    float closestDist = 1.5f;
-                    Floor.InitData closest = null;
-                    for(Floor.InitData entity : floors.entityData) {
-                        if(mouseWorld.distance(entity.position) < closestDist) {
-                            closestDist = mouseWorld.distance(entity.position);
-                            closest = entity;
-                        }
-                    }
-                    if(closest != null) {
-                        floors.entityData.remove(closest);
-                        initGameObjects();
-                    }
-                }
-                if(action == GLFW_PRESS && key == GLFW_KEY_TAB) {
-                    float closestDist = 1.5f;
-                    GameObject closest = null;
-                    for(GameObject entity : gameObjects) {
-                        if(mouseWorld.distance(entity.getCenter()) < closestDist) {
-                            closestDist = mouseWorld.distance(entity.getCenter());
-                            closest = entity;
-                        }
-                    }
-                    if(closest != null) {
-                        selectedGameObject = closest;
-                    } else {
-                        selectedGameObject = null;
-                    }
-                }
-                if(selectedGameObject != null) {
-                    if (action == GLFW_PRESS && key >= GLFW_KEY_1 && key <= GLFW_KEY_9) {
-                        if (selectedGameObject instanceof Roomba) {
-                            Roomba roomba = (Roomba) selectedGameObject;
-                            Roomba.Waypoint newWaypoint = new Roomba.Waypoint();
-                            newWaypoint.position = mouseWorld;
-                            newWaypoint.radius = key - GLFW_KEY_0;
-                            roomba.waypoints.add(newWaypoint);
-                            gameObjectDataMap.get(roomba).metadata = new Roomba.InitMetadata(roomba.waypoints);
-                        }
-                    } else if(action == GLFW_PRESS && key == GLFW_KEY_0) {
-                        if (selectedGameObject instanceof Roomba) {
-                            Roomba roomba = (Roomba) selectedGameObject;
-                            if(roomba.waypoints.size() > 0) {
-                                roomba.waypoints.remove(roomba.waypoints.size() - 1);
-                                gameObjectDataMap.get(roomba).metadata = new Roomba.InitMetadata(roomba.waypoints);
+                if(levelEdit) {
+                    if(action == GLFW_PRESS && key == GLFW_KEY_TAB) {
+                        float closestDist = 1.5f;
+                        GameObject closest = null;
+                        for(GameObject entity : gameObjects) {
+                            if(mouseWorld.distance(entity.getCenter()) < closestDist) {
+                                closestDist = mouseWorld.distance(entity.getCenter());
+                                closest = entity;
                             }
                         }
+                        if(closest != null) {
+                            selectedGameObject = closest;
+                        } else {
+                            selectedGameObject = null;
+                        }
                     }
-                } else {
-                    if (action == GLFW_PRESS && key == GLFW_KEY_0) {
-                        Floor.InitData entity = new Floor.InitData();
-                        entity.type = Floor.EntityType.PLAYER.val;
-                        entity.position = mouseWorld;
-                        floors.entityData.add(entity);
-                        initGameObjects();
+                    if(action == GLFW_RELEASE && key == GLFW_KEY_GRAVE_ACCENT) {
+                        float closestDist = 1.5f;
+                        Floor.InitData closest = null;
+                        for(Floor.InitData entity : floors.entityData) {
+                            if(mouseWorld.distance(entity.position) < closestDist) {
+                                closestDist = mouseWorld.distance(entity.position);
+                                closest = entity;
+                            }
+                        }
+                        if(closest != null) {
+                            floors.entityData.remove(closest);
+                            initGameObjects();
+                        }
                     }
-                    if (action == GLFW_PRESS && key == GLFW_KEY_1) {
-                        Floor.InitData entity = new Floor.InitData();
-                        entity.type = Floor.EntityType.ROOMBA.val;
-                        entity.position = mouseWorld;
-                        floors.entityData.add(entity);
-                        initGameObjects();
-                    }
-                    if (action == GLFW_PRESS && key == GLFW_KEY_2) {
-                        Floor.InitData entity = new Floor.InitData();
-                        entity.type = Floor.EntityType.SOFA.val;
-                        entity.position = mouseWorld;
-                        floors.entityData.add(entity);
-                        initGameObjects();
+                    if (selectedGameObject != null) {
+                        if (action == GLFW_PRESS && key >= GLFW_KEY_1 && key <= GLFW_KEY_9) {
+                            if (selectedGameObject instanceof Roomba) {
+                                Roomba roomba = (Roomba) selectedGameObject;
+                                Roomba.Waypoint newWaypoint = new Roomba.Waypoint();
+                                newWaypoint.position = mouseWorld;
+                                newWaypoint.radius = key - GLFW_KEY_0;
+                                roomba.waypoints.add(newWaypoint);
+                                gameObjectDataMap.get(roomba).metadata = new Roomba.InitMetadata(roomba.waypoints);
+                            }
+                        } else if (action == GLFW_PRESS && key == GLFW_KEY_0) {
+                            if (selectedGameObject instanceof Roomba) {
+                                Roomba roomba = (Roomba) selectedGameObject;
+                                if (roomba.waypoints.size() > 0) {
+                                    roomba.waypoints.remove(roomba.waypoints.size() - 1);
+                                    gameObjectDataMap.get(roomba).metadata = new Roomba.InitMetadata(roomba.waypoints);
+                                }
+                            }
+                        }
+                    } else {
+                        if (action == GLFW_PRESS && key == GLFW_KEY_0) {
+                            Floor.InitData entity = new Floor.InitData();
+                            entity.type = Floor.EntityType.PLAYER.val;
+                            entity.position = mouseWorld;
+                            floors.entityData.add(entity);
+                            initGameObjects();
+                        }
+                        if (action == GLFW_PRESS && key == GLFW_KEY_1) {
+                            Floor.InitData entity = new Floor.InitData();
+                            entity.type = Floor.EntityType.ROOMBA.val;
+                            entity.position = mouseWorld;
+                            floors.entityData.add(entity);
+                            initGameObjects();
+                        }
+                        if (action == GLFW_PRESS && key == GLFW_KEY_2) {
+                            Floor.InitData entity = new Floor.InitData();
+                            entity.type = Floor.EntityType.SOFA.val;
+                            entity.position = mouseWorld;
+                            floors.entityData.add(entity);
+                            initGameObjects();
+                        }
+                        if (action == GLFW_PRESS && key == GLFW_KEY_3) {
+                            Floor.InitData entity = new Floor.InitData();
+                            entity.type = Floor.EntityType.TOY0.val;
+                            entity.position = mouseWorld;
+                            floors.entityData.add(entity);
+                            initGameObjects();
+                        }
+                        if (action == GLFW_PRESS && key == GLFW_KEY_4) {
+                            Floor.InitData entity = new Floor.InitData();
+                            entity.type = Floor.EntityType.TOY1.val;
+                            entity.position = mouseWorld;
+                            floors.entityData.add(entity);
+                            initGameObjects();
+                        }
+                        if (action == GLFW_PRESS && key == GLFW_KEY_5) {
+                            Floor.InitData entity = new Floor.InitData();
+                            entity.type = Floor.EntityType.TOY2.val;
+                            entity.position = mouseWorld;
+                            floors.entityData.add(entity);
+                            initGameObjects();
+                        }
                     }
                 }
             }
@@ -257,6 +319,19 @@ public class Game {
         console.println("hello world!");
         console.println("hello world!");
         console.println("hello world!");
+
+        updateGameObjects = true;
+        levelEdit = false;
+        {
+            Floor.Group f = Floor.fromResource(Util.PATH_PREFIX + "level.dat");
+            if (f != null) {
+                floors = f;
+                floorRender.build(floors);
+                initGameObjects();
+            }
+        }
+        initGameObjects();
+        initPlayer();
 
         double currentTime = glfwGetTime(), lastTime = currentTime;
         double delta;
@@ -292,6 +367,15 @@ public class Game {
                         this.updateGameObjects = !this.updateGameObjects;
                         console.println("Update game objects: " + this.updateGameObjects);
                         this.initGameObjects();
+                        if(this.updateGameObjects) {
+                            this.initPlayer();
+                        }
+                    } else if(args[0].equals("setreq") && args.length == 2) {
+                        this.floors.toysRequired = Integer.parseInt(args[1]);
+                        this.toysRequired = floors.toysRequired;
+                    } else if(args[0].equals("edit")) {
+                        this.levelEdit = !this.levelEdit;
+                        console.println("Level editor: " + levelEdit);
                     } else {
                         console.println("Unknown command!");
                     }
@@ -301,7 +385,7 @@ public class Game {
             }
             console.commands.clear();
 
-            if(!console.focus) {
+            if(!console.focus && levelEdit) {
                 if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
                     if (floors.getTile((int) Math.floor(mouseWorld.x), (int) Math.floor(mouseWorld.y)) != (byte) 1) {
                         floors.setTile((byte) 1, (int) Math.floor(mouseWorld.x), (int) Math.floor(mouseWorld.y));
@@ -319,30 +403,17 @@ public class Game {
             do {
                 double timeStep = delta;
 
-                Vector2f move = new Vector2f(0);
-                if(!console.focus) {
-                    if(glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-                        --move.y;
-                    }
-                    if(glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-                        ++move.y;
-                    }
-                    if(glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-                        --move.x;
-                    }
-                    if(glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-                        ++move.x;
-                    }
-                }
-
-                if(!move.equals(0, 0)) {
-                    move.normalize((float) timeStep * 5.0f);
-                }
-                player.move(move.x, move.y);
-
                 if(updateGameObjects) {
+                    List<GameObject> toDelete = new ArrayList<>();
                     for (GameObject gameObject : gameObjects) {
-                        gameObject.update(timeStep, this);
+                        if(gameObject.shouldDelete()) {
+                            toDelete.add(gameObject);
+                        } else {
+                            gameObject.update(timeStep, this);
+                        }
+                    }
+                    for(GameObject gameObject : toDelete) {
+                        gameObjects.remove(gameObject);
                     }
 
                     for (GameObject object : gameObjects) {
@@ -356,7 +427,7 @@ public class Game {
                                         Box b = new Box(x + 0.5f, y + 0.5f, 1.0f, 1.0f);
                                         wall.add(b);
                                         if(object.getCollider().intersects(b)) {
-                                            object.collide(b);
+                                            object.collide(b, this);
                                         }
                                     }
                                 }
@@ -366,12 +437,17 @@ public class Game {
                                     wall.add(obj.getCollider());
                                 }
                                 if(obj != object && obj.getCollider().intersects(object.getCollider())) {
-                                    object.collide(obj);
+                                    object.collide(obj, this);
+                                    obj.collide(object, this);
                                 }
                             }
                             Vector2f resolve = object.getCollider().smallestResolution(wall);
                             object.getCollider().move(resolve.x, resolve.y);
                         }
+                    }
+                } else {
+                    if(levelEdit) {
+                        player.update(timeStep, this);
                     }
                 }
 
@@ -397,6 +473,10 @@ public class Game {
 ////                    texRender.draw(new Matrix4f(ortho).mul(view).translate(entity.position.x, entity.position.y, 0).scale(1.0f, 1.0f, 0), new Vector4f(1, 1, 1, 1));
 ////                }
 //            }
+            if(!updateGameObjects && playerStart != null && levelEdit) {
+                kid.bind();
+                texRender.draw(new Matrix4f(ortho).mul(view).translate(playerStart.x, playerStart.y - 0.45f, 0), new Vector4f(1));
+            }
 
             Collections.sort(gameObjects);
             for(GameObject obj : gameObjects) {
@@ -449,6 +529,11 @@ public class Game {
                     texRender.draw(new Matrix4f(ortho).mul(view).translate(position.x, position.y, 0).rotate((float) Math.PI / 4.0f, 0, 0, 1).scale(1, 0.05f, 0), new Vector4f(1, 0, 0, 1));
                     texRender.draw(new Matrix4f(ortho).mul(view).translate(position.x, position.y, 0).rotate((float) -Math.PI / 4.0f, 0, 0, 1).scale(1, 0.05f, 0), new Vector4f(1, 0, 0, 1));
                 }
+            }
+
+            {
+                String txt = "Toys: " + toysPossessed + " / " + toysRequired;
+                font.draw(txt, pixelWidth - font.textWidth(txt) - 10.0f, 40, ortho, new Vector4f(1));
             }
 
             console.draw(ortho);

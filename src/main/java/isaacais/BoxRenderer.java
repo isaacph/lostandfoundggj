@@ -28,8 +28,8 @@ public class BoxRenderer {
     private int vbo;
 
     public BoxRenderer() {
-        int vert = Shader.createShader("../simplev.glsl", GL_VERTEX_SHADER);
-        int frag = Shader.createShader("../simplef.glsl", GL_FRAGMENT_SHADER);
+        int vert = Shader.createShader(Util.PATH_PREFIX + "simplev.glsl", GL_VERTEX_SHADER);
+        int frag = Shader.createShader(Util.PATH_PREFIX + "simplef.glsl", GL_FRAGMENT_SHADER);
         program = glCreateProgram();
         glAttachShader(program, vert);
         glAttachShader(program, frag);

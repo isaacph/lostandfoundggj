@@ -40,8 +40,8 @@ public class Font {
         this.source = source;
         this.size = size;
 
-        int vertex = Shader.createShader("../textv.glsl", GL_VERTEX_SHADER);
-        int fragment = Shader.createShader("../textf.glsl", GL_FRAGMENT_SHADER);
+        int vertex = Shader.createShader(Util.PATH_PREFIX + "textv.glsl", GL_VERTEX_SHADER);
+        int fragment = Shader.createShader(Util.PATH_PREFIX + "textf.glsl", GL_FRAGMENT_SHADER);
         shader = glCreateProgram();
         glAttachShader(shader, vertex);
         glAttachShader(shader, fragment);

@@ -44,6 +44,18 @@ public class Floor implements Serializable {
             return null;
         }
     }
+
+    public static Floor.Group fromResource(String path) {
+        try {
+            InputStream stream = Texture.class.getResourceAsStream(path);
+            ObjectInputStream s = new ObjectInputStream(stream);
+            return (Floor.Group) s.readObject();
+        } catch (Exception e) {
+            System.err.println("Unable to read floor " + path);
+            e.printStackTrace();
+            return null;
+        }
+    }
     public static void toFile(Floor.Group floors, String path) {
         try {
             ObjectOutputStream stream = new ObjectOutputStream(Util.writeFile(path));
@@ -59,9 +71,12 @@ public class Floor implements Serializable {
     public static class Group implements Serializable {
         public HashMap<Vector2i, Floor> floors;
         public List<InitData> entityData;
+
+        public int toysRequired;
         public Group() {
             floors = new HashMap<>();
             entityData = new ArrayList<>();
+            toysRequired = 0;
         }
         public void setTile(byte b, int x, int y) {
             Vector2i p = getFloorIndex(x, y);
@@ -92,7 +107,7 @@ public class Floor implements Serializable {
     }
 
     public enum EntityType {
-        NULL(0), PLAYER(1), ROOMBA(2), SOFA(3);
+        NULL(0), PLAYER(1), ROOMBA(2), SOFA(3), TOY0(4), TOY1(5), TOY2(6);
 
         public byte val;
         EntityType(int val) {

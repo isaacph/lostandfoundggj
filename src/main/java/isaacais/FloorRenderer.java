@@ -42,11 +42,11 @@ public class FloorRenderer {
     private Texture carpet, wall;
 
     public FloorRenderer() {
-        carpet = new Texture("../carpet.png", new Texture.Settings(GL_REPEAT, GL_NEAREST));
-        wall = new Texture("../wall.png", new Texture.Settings(GL_CLAMP_TO_EDGE, GL_NEAREST));
+        carpet = new Texture(Util.PATH_PREFIX + "carpet.png", new Texture.Settings(GL_REPEAT, GL_NEAREST));
+        wall = new Texture(Util.PATH_PREFIX + "wall.png", new Texture.Settings(GL_CLAMP_TO_EDGE, GL_NEAREST));
         this.texRender = new TextureRenderer(4);
-        int vert = Shader.createShader("../simplev.glsl", GL_VERTEX_SHADER);
-        int frag = Shader.createShader("../simplef.glsl", GL_FRAGMENT_SHADER);
+        int vert = Shader.createShader(Util.PATH_PREFIX + "simplev.glsl", GL_VERTEX_SHADER);
+        int frag = Shader.createShader(Util.PATH_PREFIX + "simplef.glsl", GL_FRAGMENT_SHADER);
         programMask = glCreateProgram();
         glAttachShader(programMask, vert);
         glAttachShader(programMask, frag);
