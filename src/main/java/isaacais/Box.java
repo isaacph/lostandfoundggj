@@ -77,4 +77,12 @@ public class Box extends Convex{
         b.y += displacement.y;
         return b;
     }
+
+    @Override
+    public Convex withCenter(Vector2f position) {
+        Box b = new Box(this);
+        b.x = position.x;
+        b.y = position.y;
+        return b;
+    }
 }

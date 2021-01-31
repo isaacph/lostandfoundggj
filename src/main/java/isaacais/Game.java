@@ -2,14 +2,12 @@ package isaacais;
 
 import org.joml.Matrix4f;
 import org.joml.Vector2f;
+import org.joml.Vector2i;
 import org.joml.Vector4f;
 import org.lwjgl.glfw.*;
 import org.lwjgl.opengl.*;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 import static org.lwjgl.glfw.Callbacks.*;
 import static org.lwjgl.glfw.GLFW.*;
@@ -23,7 +21,7 @@ public class Game {
     public float scale = 128.0f;
     public int pixelWidth = 800, pixelHeight = 600;
     private Vector2f mouseWorld;
-    private Floor.Group floors;
+    public Floor.Group floors;
 
     private BoxRenderer boxRender;
     private TextureRenderer texRender;
@@ -42,6 +40,17 @@ public class Game {
 
     public GameObject selectedGameObject = null;
     public Map<GameObject, Floor.InitData> gameObjectDataMap;
+
+    public List<GameObject> getObjectsInTiles(Vector2i min, Vector2i max) {
+        Box box = new Box((min.x + max.x + 1) / 2.0f, (min.y + max.y + 1) / 2.0f, (max.x - min.x + 1) - 0.001f, (max.y - min.y + 1) - 0.001f);
+        ArrayList<GameObject> list = new ArrayList<>();
+        for(GameObject obj : gameObjects) {
+            if(box.intersects(obj.getCollider())) {
+                list.add(obj);
+            }
+        }
+        return list;
+    }
 
     public void onWindowSizeChange(int w, int h) {
         if(w > 0 && h > 0) {
@@ -259,6 +268,7 @@ public class Game {
             screenY = player.getCenter().y;
             glfwGetCursorPos(window, mx, my);
             mouseWorld = toWorldSpace(new Vector2f((float) mx[0], (float) my[0]));
+            if(delta > 0.1f) delta = 0.1f;
 
             console.update(delta);
             for(String cmd : console.commands) {
@@ -281,6 +291,7 @@ public class Game {
                     } else if (args[0].equals("ugo")) {
                         this.updateGameObjects = !this.updateGameObjects;
                         console.println("Update game objects: " + this.updateGameObjects);
+                        this.initGameObjects();
                     } else {
                         console.println("Unknown command!");
                     }
@@ -339,20 +350,23 @@ public class Game {
                             ArrayList<Convex> wall = new ArrayList<>();
                             int minX = (int) Math.floor(object.getCollider().getCenter().x) - 1, maxX = (int) Math.ceil(object.getCollider().getCenter().x) + 1;
                             int minY = (int) Math.floor(object.getCollider().getCenter().y) - 1, maxY = (int) Math.ceil(object.getCollider().getCenter().y) + 1;
-                            for (int y = minY;
-                                 y <= maxY;
-                                 ++y) {
-                                for (int x = minX;
-                                     x <= maxX;
-                                     ++x) {
+                            for (int y = minY; y <= maxY; ++y) {
+                                for (int x = minX; x <= maxX; ++x) {
                                     if (floors.getTile(x, y) == Floor.Tile.EMPTY.val) {
-                                        wall.add(new Box(x + 0.5f, y + 0.5f, 1.0f, 1.0f));
+                                        Box b = new Box(x + 0.5f, y + 0.5f, 1.0f, 1.0f);
+                                        wall.add(b);
+                                        if(object.getCollider().intersects(b)) {
+                                            object.collide(b);
+                                        }
                                     }
                                 }
                             }
                             for (GameObject obj : gameObjects) {
-                                if (obj != object) {
+                                if (obj != object && obj.colliderPriority() >= object.colliderPriority()) {
                                     wall.add(obj.getCollider());
+                                }
+                                if(obj != object && obj.getCollider().intersects(object.getCollider())) {
+                                    object.collide(obj);
                                 }
                             }
                             Vector2f resolve = object.getCollider().smallestResolution(wall);

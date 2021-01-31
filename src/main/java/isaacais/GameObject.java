@@ -17,6 +17,14 @@ public abstract class GameObject implements Comparable<GameObject> {
 
     public void update(double delta, Game game) {}
 
+    public void collide(GameObject other) {
+
+    }
+
+    public void collide(Box wall) {
+
+    }
+
     public int colliderPriority() {
         return Integer.MAX_VALUE;
     }
