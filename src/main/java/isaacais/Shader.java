@@ -9,7 +9,7 @@ public final class Shader {
 
     public static int createShader(String path, int type) {
         try {
-            return createShader(path, getFile(path), type);
+            return createShader(path, Util.getFile(path), type);
         } catch(IOException e) {
             e.printStackTrace();
             throw new RuntimeException("Error creating shader " + path);
@@ -18,15 +18,6 @@ public final class Shader {
             e.printStackTrace();
             throw new RuntimeException("Error creating shader " + path);
         }
-    }
-
-    public static String getFile(String path) throws IOException {
-        BufferedReader reader = new BufferedReader(new InputStreamReader(Shader.class.getResourceAsStream(path)));
-        StringBuilder b = new StringBuilder();
-        while(reader.ready()) {
-            b.append(reader.readLine()).append("\n");
-        }
-        return b.toString();
     }
 
     public static int createShader(String name, String src, int type) {

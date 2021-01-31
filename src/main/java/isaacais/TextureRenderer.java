@@ -12,21 +12,22 @@ import static org.lwjgl.opengl.GL30.*;
 
 public class TextureRenderer {
 
-    private static final float[] TRIANGLES = {
-        -0.5f, -0.5f, 0.0f, 0.0f,
-        -0.5f, +0.5f, 0.0f, 1.0f,
-        +0.5f, +0.5f, 1.0f, 1.0f,
-        +0.5f, +0.5f, 1.0f, 1.0f,
-        +0.5f, -0.5f, 1.0f, 0.0f,
-        -0.5f, -0.5f, 0.0f, 0.0f
-    };
-
-    private final int program;
-    private int[] uniforms;
+    public final int program;
+    public int[] uniforms;
     private int vao;
     private int vbo;
 
-    public TextureRenderer() {
+    public TextureRenderer(int duplicate) {
+        float scale = duplicate;
+        float[] triangles = {
+            -0.5f, -0.5f, 0.0f, 0.0f,
+            -0.5f, +0.5f, 0.0f, scale,
+            +0.5f, +0.5f, scale, scale,
+            +0.5f, +0.5f, scale, scale,
+            +0.5f, -0.5f, scale, 0.0f,
+            -0.5f, -0.5f, 0.0f, 0.0f
+        };
+
         int vert = Shader.createShader("../texturev.glsl", GL_VERTEX_SHADER);
         int frag = Shader.createShader("../texturef.glsl", GL_FRAGMENT_SHADER);
         program = glCreateProgram();
@@ -50,12 +51,15 @@ public class TextureRenderer {
 
         vbo = glGenBuffers();
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
-        glBufferData(GL_ARRAY_BUFFER, TRIANGLES, GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, triangles, GL_STATIC_DRAW);
         glEnableVertexAttribArray(Shader.Attribute.POSITION.num);
         glVertexAttribPointer(Shader.Attribute.POSITION.num, 2, GL_FLOAT, false, 4 * 4, 0);
         glEnableVertexAttribArray(Shader.Attribute.TEXTURE.num);
         glVertexAttribPointer(Shader.Attribute.TEXTURE.num, 2, GL_FLOAT, false, 4 * 4, 2 * 4);
         Main.checkGLError("texture buffer init");
+    }
+    public TextureRenderer() {
+        this(1);
     }
 
     public void draw(Matrix4f matrix, Vector4f color) {

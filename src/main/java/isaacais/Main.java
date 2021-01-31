@@ -18,13 +18,30 @@ import static org.lwjgl.system.MemoryUtil.*;
 public class Main {
     public long window;
     public Matrix4f ortho, view;
+    public float screenX, screenY;
+    public float scale = 128.0f;
+    public int pixelWidth = 800, pixelHeight = 600;
+    private Vector2f mouseWorld;
 
     public void onWindowSizeChange(int w, int h) {
-        glViewport(0, 0, w, h);
-        ortho = new Matrix4f().ortho(0.0f, (float) w, (float) h, 0, 0.0f, 1.0f);
+        if(w > 0 && h > 0) {
+            glViewport(0, 0, w, h);
+            ortho = new Matrix4f().ortho(0.0f, (float) w, (float) h, 0, 0.0f, 1.0f);
+            pixelWidth = w;
+            pixelHeight = h;
+            scale = w / 20.0f;
+        }
+    }
+
+    public Vector2f toWorldSpace(Vector2f screenSpace) {
+        return new Vector2f(((screenSpace.x - pixelWidth / 2.0f) / scale) + screenX, ((screenSpace.y - pixelHeight / 2.0f) / scale) + screenY);
+    }
+
+    public void setViewMatrix() {
         view = new Matrix4f();
-        view.scale(100);
-        view.translate(5, 5, 0);
+        view.translate(pixelWidth / 2.0f, pixelHeight / 2.0f, 0);
+        view.scale(scale);
+        view.translate(-screenX, -screenY, 0);
     }
 
     public void run() {
@@ -53,16 +70,60 @@ public class Main {
 
         BoxRenderer boxRender = new BoxRenderer();
         TextureRenderer texRender = new TextureRenderer();
+        FloorRenderer floorRender = new FloorRenderer();
         Texture texture = new Texture("../scrap.png");
         Font font = new Font("../font.ttf", 48, 512, 512);
-        Box player = new Box(3, 3, 1);
-        ArrayList<Box> wall = new ArrayList<>(Arrays.asList(
-            new Box(4, 4, 1),
-            new Box(5, 4, 1),
-            new Box(5, 5, 1)
-        ));
+        Console console = new Console(font, boxRender);
 
-        System.out.println(Convex.project(new Vector2f(1, 0), new Vector2f(0, 0), new Vector2f(2, 1)));
+        Floor.Group floors = new Floor.Group();
+        floors.setTile((byte) 1, 0, 0);
+        floors.setTile((byte) 1, -1, 0);
+        floors.setTile((byte) 1, 0, -1);
+        floors.setTile((byte) 1, -1, -1);
+        floorRender.build(floors);
+
+        Texture kid = new Texture("../kid.png");
+        Texture roomba = new Texture("../roomba.png");
+        Texture sof = new Texture("../sofa.png");
+        Box player = new Box(0, 0, 0.4f);
+
+        double[] mx = new double[1], my = new double[1];
+
+        glfwSetKeyCallback(window, ((w, key, scancode, action, mods) -> {
+            if(key == GLFW_KEY_ENTER && action == GLFW_PRESS) {
+                if(console.focus) {
+                    if (!console.send()) {
+                        console.disable();
+                    }
+                } else {
+                    console.enable();
+                }
+            }
+            if(key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
+                if(console.focus) {
+                    console.disable();
+                }
+            } else if(key == GLFW_KEY_BACKSPACE && action > 0) {
+                if(console.typing.length() > 0) {
+                    console.typing.deleteCharAt(console.typing.length() - 1);
+                }
+            }
+            if(action == GLFW_PRESS && key == GLFW_KEY_0) {
+                Floor.InitData entity = new Floor.InitData();
+                entity.type = Floor.EntityType.PLAYER.val;
+                entity.position = mouseWorld;
+            }
+        }));
+        glfwSetCharCallback(window, ((w, c) -> {
+            if(console.focus) {
+                console.typing.append((char) c);
+            }
+        }));
+
+        console.println("hello world!");
+        console.println("hello world!");
+        console.println("hello world!");
+        console.println("hello world!");
 
         double currentTime = glfwGetTime(), lastTime = currentTime;
         double delta;
@@ -70,176 +131,135 @@ public class Main {
             currentTime = glfwGetTime();
             delta = currentTime - lastTime;
             lastTime = currentTime;
+            screenX = player.x;
+            screenY = player.y;
+            glfwGetCursorPos(window, mx, my);
+            mouseWorld = toWorldSpace(new Vector2f((float) mx[0], (float) my[0]));
+
+            console.update(delta);
+            for(String cmd : console.commands) {
+                if(cmd.startsWith("/")) {
+                    String[] args = cmd.substring(1).split("\\s");
+                    if(args[0].equals("test")) {
+                        console.println("Testing!");
+                    } else if(args[0].equals("set") && args.length == 4) {
+                        floors.setTile(Byte.parseByte(args[1]), Integer.parseInt(args[2]), Integer.parseInt(args[3]));
+                        floorRender.build(floors);
+                    } else if(args[0].equals("save") && args.length == 2) {
+                        Floor.toFile(floors, args[1]);
+                    } else if(args[0].equals("load") && args.length == 2) {
+                        Floor.Group f = Floor.fromFile(args[1]);
+                        if(f != null) {
+                            floors = f;
+                            floorRender.build(floors);
+                        }
+                    } else {
+                        console.println("Unknown command!");
+                    }
+                } else {
+                    console.println(cmd);
+                }
+            }
+            console.commands.clear();
+
+            if(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
+                if (floors.getTile((int) Math.floor(mouseWorld.x), (int) Math.floor(mouseWorld.y)) != (byte) 1) {
+                    floors.setTile((byte) 1, (int) Math.floor(mouseWorld.x), (int) Math.floor(mouseWorld.y));
+                    floorRender.build(floors);
+                }
+            } else if(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS) {
+                if (floors.getTile((int) Math.floor(mouseWorld.x), (int) Math.floor(mouseWorld.y)) != (byte) 0) {
+                    floors.setTile((byte) 0, (int) Math.floor(mouseWorld.x), (int) Math.floor(mouseWorld.y));
+                    floorRender.build(floors);
+//                    System.out.printf("%f, %f\n", b.x, b.y);
+                }
+            }
 
             do {
                 float timeStep = 1.0f / 60.0f;
                 delta -= timeStep;
 
-                if(glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
-                    player.rotation += timeStep;
-                }
-                if(glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
-                    player.rotation -= timeStep;
+                Vector2f move = new Vector2f(0);
+                if(!console.focus) {
+                    if(glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
+                        player.rotation += timeStep;
+                    }
+                    if(glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
+                        player.rotation -= timeStep;
+                    }
+
+                    if(glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+                        --move.y;
+                    }
+                    if(glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+                        ++move.y;
+                    }
+                    if(glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+                        --move.x;
+                    }
+                    if(glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+                        ++move.x;
+                    }
                 }
 
-                Vector2f move = new Vector2f(0);
-                if(glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-                    --move.y;
-                }
-                if(glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-                    ++move.y;
-                }
-                if(glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-                    --move.x;
-                }
-                if(glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-                    ++move.x;
-                }
                 if(!move.equals(0, 0)) {
-                    move.normalize(timeStep * 1);
+                    move.normalize(timeStep * 5);
                 }
                 player.x += move.x;
                 player.y += move.y;
 
-//                if(glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
-                    Vector2f resolve = player.smallestResolution(wall);
-                    player.x += resolve.x;
-                    player.y += resolve.y;
-//                }
+                ArrayList<Box> wall = new ArrayList<>();
+                int minX = (int) Math.floor(player.x) - 1, maxX = (int) Math.ceil(player.x) + 1;
+                int minY = (int) Math.floor(player.y) - 1, maxY = (int) Math.ceil(player.y) + 1;
+                for(int y = minY; y <= maxY; ++y) {
+                    for(int x = minX; x <= maxX; ++x) {
+                        if(floors.getTile(x, y) == Floor.Tile.EMPTY.val) {
+                            wall.add(new Box(x + 0.5f, y + 0.5f, 1.0f, 1.0f));
+                        }
+                    }
+                }
+
+                Vector2f resolve = player.smallestResolution(wall);
+                player.x += resolve.x;
+                player.y += resolve.y;
+                screenX = player.x;
+                screenY = player.y;
             } while(delta >= 1.0 / 60.0);
 
             glClear(GL_COLOR_BUFFER_BIT);
 
+            setViewMatrix();
+
             Main.checkGLError("Main start");
-            boxRender.draw(new Matrix4f(ortho).mul(view).mul(player.getModelMatrix()), new Vector4f(1, 1, 1, 1));
 
             texture.bind();
-            for(Box w : wall) {
-                texRender.draw(new Matrix4f(ortho).mul(view).mul(w.getModelMatrix()), new Vector4f(1, 1, 1, 1));
+            floorRender.draw(new Matrix4f(ortho).mul(view));
+
+            for(Floor.InitData entity : floors.entityData) {
+                if(entity.type == Floor.EntityType.PLAYER.val) {
+                    kid.bind();
+                    texRender.draw(new Matrix4f(ortho).mul(view).translate(entity.position.x, entity.position.y - 0.3f, 0).scale(1.0f, 1.0f, 0), new Vector4f(1, 1, 1, 1));
+                } else if(entity.type == Floor.EntityType.ROOMBA.val) {
+                    roomba.bind();
+                    texRender.draw(new Matrix4f(ortho).mul(view).translate(entity.position.x, entity.position.y, 0).scale(1.0f, 1.0f, 0), new Vector4f(1, 1, 1, 1));
+                }
             }
 
-//            {
-//                boxRender.draw(new Matrix4f(ortho).mul(view).translate(0, 0, 0).rotate(player.rotation, 0, 0, 1).scale(40, 0.04f, 0), new Vector4f(1, 1, 0.5f, 1));
-//                for(int i = 0; i < 4; ++i)
-//                {
-//                    Vector2f v = Convex.project(player.axes()[0], new Vector2f(0), player.points()[i]);
-////                    v.y += player.y;
-//                    boxRender.draw(new Matrix4f(ortho).mul(view).translate(
-//                        v.x, v.y, 0).scale(0.08f), new Vector4f(0, 0, 1, 1));
-//                }
-//                for(Box b : wall) {
-//                    for(int i = 0; i < 4; ++i) {
-//                        Vector2f v = Convex.project(player.axes()[0], new Vector2f(0), b.points()[i]);
-////                    v.y += player.y;
-//                        boxRender.draw(new Matrix4f(ortho).mul(view).translate(
-//                            v.x, v.y, 0).scale(0.08f), new Vector4f(0, 1, 1, 0.1f));
+            kid.bind();
+            texRender.draw(new Matrix4f(ortho).mul(view).translate(player.x, player.y - 0.3f, 0).scale(1.0f, 1.0f, 0), new Vector4f(1, 1, 1, 1));
+//            for(Floor floor : floors.floors.values()) {
+//                for(int y = 0; y < Floor.FLOOR_SIZE; ++y) {
+//                    for(int x = 0; x < Floor.FLOOR_SIZE; ++x) {
+//                        if(floor.get(x, y) != (byte) 0) {
+//                            boxRender.draw(new Matrix4f(ortho).mul(view)
+//                                .translate(floor.x * Floor.FLOOR_SIZE + x + 0.5f, floor.y * Floor.FLOOR_SIZE + y + 0.5f, 0),
+//                                new Vector4f(0, 1, 0, 0.5f));
+//                        }
 //                    }
 //                }
 //            }
-//
-//            {
-//                boxRender.draw(new Matrix4f(ortho).mul(view).translate(0, 0, 0).rotate(0, 0, 0, 1).scale(40, 0.04f, 0), new Vector4f(1, 1, 0.5f, 1));
-//                for(int i = 0; i < 4; ++i)
-//                {
-//                    Vector2f v = Convex.project(new Vector2f(1, 0), new Vector2f(0), player.points()[i]);
-////                    v.y += player.y;
-//                    boxRender.draw(new Matrix4f(ortho).mul(view).translate(
-//                        v.x, v.y, 0).scale(0.08f), new Vector4f(0, 0, 1, 1));
-//                }
-//                for(Box b : wall) {
-//                    for(int i = 0; i < 4; ++i) {
-//                        Vector2f v = Convex.project(new Vector2f(1, 0), new Vector2f(0), b.points()[i]);
-////                    v.y += player.y;
-//                        boxRender.draw(new Matrix4f(ortho).mul(view).translate(
-//                            v.x, v.y, 0).scale(0.08f), new Vector4f(0, 1, 1, 0.1f));
-//                    }
-//                }
-//            }
-//            {
-//                boxRender.draw(new Matrix4f(ortho).mul(view).translate(0, 0, 0).rotate(player.rotation + (float) Math.PI / 2, 0, 0, 1).scale(40, 0.04f, 0), new Vector4f(1, 1, 0, 1));
-////                boxRender.draw(new Matrix4f(ortho).mul(view).translate(player.x, player.y, 0).rotate(player.rotation + (float) Math.PI / 2, 0, 0, 1).scale(4, 0.04f, 0), new Vector4f(1, 1, 0, 1));
-//                for(Vector2f v : player.points()) {
-//                    boxRender.draw(new Matrix4f(ortho).mul(view).translate(v.x, v.y, 0).scale(0.1f), new Vector4f(0.1f, 1, 0, 1));
-//                }
-//                for(int i = 0; i < 4; ++i)
-//                {
-//                    Vector2f v = Convex.project(player.axes()[1], new Vector2f(0), player.points()[i]);
-////                    v.y += player.y;
-//                    boxRender.draw(new Matrix4f(ortho).mul(view).translate(
-//                        v.x, v.y, 0).scale(0.08f), new Vector4f(0, 0, 1, 1));
-//                }
-//                for(Box b : wall) {
-//                    for(int i = 0; i < 4; ++i) {
-//                        Vector2f v = Convex.project(player.axes()[1], new Vector2f(0), b.points()[i]);
-////                    v.y += player.y;
-//                        boxRender.draw(new Matrix4f(ortho).mul(view).translate(
-//                            v.x, v.y, 0).scale(0.08f), new Vector4f(0, 1, 1, 0.1f));
-//                    }
-//                }
-//                ArrayList<Vector2f> resolutions = new ArrayList<>();
-//                int bestResolutionCollisions = 0;
-//                for(Box c : wall) {
-//                    if(player.intersects(c)) {
-//                        resolutions.addAll(player.resolveOptions(c));
-////                        ++bestResolutionCollisions;
-////                        ArrayList<Vector2f> axes = new ArrayList<>(Arrays.asList(player.axes()));
-////                        for(Vector2f p : c.points()) {
-////                            for(Vector2f a : axes) {
-////                                Vector2f proj = Convex.project(a, p).add(0, player.y);
-////                                boxRender.draw(new Matrix4f(ortho).translate(proj.x, proj.y,0).scale(10), new Vector4f(0, 1, 0, 1));
-////                            }
-////                        }
-////                        axes = new ArrayList<>(Arrays.asList(c.axes()));
-////                        for(Vector2f p : c.points()) {
-////                            for(Vector2f a : axes) {
-////                                Vector2f proj = Convex.project(a, p).add(c.x, c.y);
-////                                boxRender.draw(new Matrix4f(ortho).translate(proj.x, proj.y,0).scale(10), new Vector4f(0, 1, 0, 1));
-////                            }
-////                        }
-//                    }
-//                }
-//                for(Vector2f v : resolutions) {
-//                    Box b = new Box(player);
-//                    b.x += v.x;
-//                    b.y += v.y;
-//                    boxRender.draw(new Matrix4f(ortho).mul(view).mul(b.getModelMatrix()), new Vector4f(1, 0, 0, 0.1f));
-//                }
-////                int step1Size = resolutions.size();
-////                for(int i = 0; i < step1Size; ++i) {
-////                    Convex b = add(resolutions.get(i));
-////                    for (Convex b2 : convexes) {
-////                        if(b.intersects(b2)) {
-////                            ArrayList<Vector2f> options = b.resolveOptions(b2);
-////                            for(Vector2f v : options) {
-////                                v.x += resolutions.get(i).x;
-////                                v.y += resolutions.get(i).y;
-////                            }
-////                            resolutions.addAll(options);
-////                        }
-////                    }
-////                }
-////                Vector2f bestResolution = new Vector2f(0);
-////                float bestResolutionMagSq = 0;
-////                for(int i = 0; i < resolutions.size(); ++i) {
-////                    int collisions = 0;
-////                    Convex option = add(resolutions.get(i));
-////                    for(Convex b : convexes) {
-////                        if(option.intersects(b)) {
-////                            ++collisions;
-////                        }
-////                    }
-////                    if(collisions < bestResolutionCollisions
-////                        || (collisions == bestResolutionCollisions && resolutions.get(i).lengthSquared() < bestResolutionMagSq)) {
-////                        bestResolution = resolutions.get(i);
-////                        bestResolutionCollisions = collisions;
-////                        bestResolutionMagSq = bestResolution.lengthSquared();
-////                    }
-////                }
-//            }
-
-            double[] mx = new double[1], my = new double[1];
-            glfwGetCursorPos(window, mx, my);
-            font.draw(""+(mx[0] / 100 - 5) + ", " + (my[0] / 100 - 5), 100, 250, ortho);
+//            font.draw(""+(mx[0] / 100 - 5) + ", " + (my[0] / 100 - 5), 100, 250, ortho, new Vector4f(1, 1, 1, 1));
+            console.draw(ortho);
 
             glfwSwapBuffers(window);
             glfwPollEvents();
@@ -247,6 +267,8 @@ public class Main {
         Main.checkGLError("Main loop");
 
         boxRender.destroy();
+        texRender.destroy();
+        font.cleanUp();
 
         glfwFreeCallbacks(window);
         glfwDestroyWindow(window);
