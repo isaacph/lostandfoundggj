@@ -38,6 +38,8 @@ public class Game {
     private Texture sink;
     private Texture oven;
     private Texture fridge;
+    private Texture nightstand;
+    private Texture bed;
     private Font font;
     private Font fontBig;
     private Font fontSmall;
@@ -172,6 +174,20 @@ public class Game {
                     0.25f);
                 gameObjects.add(tgo);
                 gameObjectDataMap.put(tgo, entity);
+            } else if(entity.type == Floor.EntityType.BED.val) {
+                TextureGameObject tgo = new TextureGameObject(texRender, bed,
+                    new Box(entity.position.x, entity.position.y, 2.2f, 1),
+                    new Box(entity.position.x - 0.05f, entity.position.y, 3),
+                    0.25f);
+                gameObjects.add(tgo);
+                gameObjectDataMap.put(tgo, entity);
+            } else if(entity.type == Floor.EntityType.NIGHTSTAND.val) {
+                TextureGameObject tgo = new TextureGameObject(texRender, nightstand,
+                    new Box(entity.position.x, entity.position.y, 0.5f, 0.5f),
+                    new Box(entity.position.x, entity.position.y - 0.3f, 2),
+                    0.25f);
+                gameObjects.add(tgo);
+                gameObjectDataMap.put(tgo, entity);
             }
         }
     }
@@ -228,7 +244,7 @@ public class Game {
         floorRender = new FloorRenderer();
         spriteRender = new SpriteRenderer();
         scrap = new Texture(Util.PATH_PREFIX + "scrap.png");
-        roomba = new Texture(Util.PATH_PREFIX + "roomba.png");
+        roomba = new Texture(Util.PATH_PREFIX + "roomba2.png");
         sofa = new Texture(Util.PATH_PREFIX + "sofa.png");
         alien = new Texture(Util.PATH_PREFIX + "alien.png");
         bunny = new Texture(Util.PATH_PREFIX + "bunny.png");
@@ -237,6 +253,8 @@ public class Game {
         sink = new Texture(Util.PATH_PREFIX + "sink.png");
         oven = new Texture(Util.PATH_PREFIX + "oven.png");
         fridge = new Texture(Util.PATH_PREFIX + "fridge.png");
+        bed = new Texture(Util.PATH_PREFIX + "bed.png");
+        nightstand = new Texture(Util.PATH_PREFIX + "nightstand.png");
         font = new Font(Util.PATH_PREFIX + "font.ttf", 48, 512, 512);
         fontBig = new Font(Util.PATH_PREFIX + "font.ttf", 80, 1024, 1024);
         fontSmall = new Font(Util.PATH_PREFIX + "font.ttf", 28, 512, 256);
@@ -382,6 +400,20 @@ public class Game {
                         if (action == GLFW_PRESS && key == GLFW_KEY_8) {
                             Floor.InitData entity = new Floor.InitData();
                             entity.type = Floor.EntityType.FRIDGE.val;
+                            entity.position = mouseWorld;
+                            floors.entityData.add(entity);
+                            initGameObjects();
+                        }
+                        if (action == GLFW_PRESS && key == GLFW_KEY_9) {
+                            Floor.InitData entity = new Floor.InitData();
+                            entity.type = Floor.EntityType.BED.val;
+                            entity.position = mouseWorld;
+                            floors.entityData.add(entity);
+                            initGameObjects();
+                        }
+                        if (action == GLFW_PRESS && key == GLFW_KEY_O) {
+                            Floor.InitData entity = new Floor.InitData();
+                            entity.type = Floor.EntityType.NIGHTSTAND.val;
                             entity.position = mouseWorld;
                             floors.entityData.add(entity);
                             initGameObjects();
