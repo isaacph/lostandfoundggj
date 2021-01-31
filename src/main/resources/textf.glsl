@@ -5,5 +5,5 @@ uniform vec4 color;
 out vec4 outColor;
 void main() {
     float f = texture2D(sampler, texCoord).r;
-    outColor = color * vec4(f);
+    outColor = vec4(vec3(color.w), 1) * color * vec4(f);
 }

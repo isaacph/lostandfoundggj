@@ -15,7 +15,7 @@ public class Console {
     public int displayLines = 7;
     public float x = 0, y = 40;
     public float jump = 40;
-    public float width = 400;
+    public float width = 500;
     public boolean visible = false;
     public boolean focus = false;
     public static final float FOCUS_TIME = 5;
@@ -61,9 +61,9 @@ public class Console {
                 pos += jump;
             }
             if((int) (lineTimer * 4) % 2 == 0) {
-                font.draw(typing.toString(), x, pos, ortho, new Vector4f(1));
+                font.draw(typing.toString(), x, pos, ortho, new Vector4f(1, 1, 1, focusTimer / FOCUS_TIME));
             } else {
-                font.draw(typing.toString() + "|", x, pos, ortho, new Vector4f(1));
+                font.draw(typing.toString() + "|", x, pos, ortho, new Vector4f(1, 1, 1, focusTimer / FOCUS_TIME));
             }
         }
     }
@@ -84,7 +84,7 @@ public class Console {
                 ++index;
                 width = font.textWidth(s.substring(start, index));
             }
-            add(s.substring(0, index));
+            add(s.substring(start, index));
             start = index;
         }
     }

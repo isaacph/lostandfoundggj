@@ -1,6 +1,7 @@
 package isaacais;
 
 import org.joml.Matrix4f;
+import org.joml.Vector2f;
 
 public abstract class GameObject implements Comparable<GameObject> {
 
@@ -15,4 +16,10 @@ public abstract class GameObject implements Comparable<GameObject> {
     }
 
     public void update(double delta, Game game) {}
+
+    public int colliderPriority() {
+        return Integer.MAX_VALUE;
+    }
+
+    public abstract Vector2f getCenter();
 }
