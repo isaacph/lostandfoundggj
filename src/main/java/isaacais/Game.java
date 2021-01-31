@@ -48,6 +48,8 @@ public class Game {
 
     public Vector2f playerStart;
 
+    public SoundPlayer soundPlayer;
+
     public List<GameObject> getObjectsInTiles(Vector2i min, Vector2i max) {
         Box box = new Box((min.x + max.x + 1) / 2.0f, (min.y + max.y + 1) / 2.0f, (max.x - min.x + 1) - 0.001f, (max.y - min.y + 1) - 0.001f);
         ArrayList<GameObject> list = new ArrayList<>();
@@ -168,6 +170,7 @@ public class Game {
             }
         });
         this.onWindowSizeChange(800, 600);
+        soundPlayer = new SoundPlayer();
 
         boxRender = new BoxRenderer();
         texRender = new TextureRenderer();
@@ -333,6 +336,8 @@ public class Game {
         initGameObjects();
         initPlayer();
 
+        double soundTimer = 3 * 60;
+
         double currentTime = glfwGetTime(), lastTime = currentTime;
         double delta;
         while ( !glfwWindowShouldClose(window) ) {
@@ -343,6 +348,13 @@ public class Game {
             screenY = player.getCenter().y;
             glfwGetCursorPos(window, mx, my);
             mouseWorld = toWorldSpace(new Vector2f((float) mx[0], (float) my[0]));
+
+            soundTimer += delta;
+            if(soundTimer > 2 * 60 + 12) {
+                soundTimer = 0;
+                soundPlayer.play(Sound.MUSIC);
+            }
+
             if(delta > 0.1f) delta = 0.1f;
 
             console.update(delta);
@@ -551,6 +563,7 @@ public class Game {
         glfwDestroyWindow(window);
         glfwTerminate();
         glfwSetErrorCallback(null).free();
+        soundPlayer.cleanUp();
     }
 
     public static void main(String... args) {
