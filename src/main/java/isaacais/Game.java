@@ -471,7 +471,7 @@ public class Game {
             soundTimer += delta;
             if(soundTimer > 2 * 60 + 12) {
                 soundTimer = 0;
-                soundPlayer.play(Sound.MUSIC);
+                soundPlayer.play(Sound.MUSIC, 60 * 2 + 12);
             }
 
             if(delta > 0.1f) delta = 0.1f;

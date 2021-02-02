@@ -78,6 +78,22 @@ public class SoundPlayer {
         alSourcePlay(sources[min]);
     }
 
+    public void play(Sound sound, float duration) {
+        int min = 0;
+        for(int i = 1; i < sources.length; ++i) {
+            if(sourceTime[i] < sourceTime[min]) {
+                min = i;
+            }
+        }
+        if(sourceSound[min] != Sound.NONE) {
+            alSourceStop(sources[min]);
+        }
+        sourceTime[min] = time + duration;
+        sourceSound[min] = sound;
+        alSourcei(sources[min], AL_BUFFER, soundBuffer.get(sound));
+        alSourcePlay(sources[min]);
+    }
+
     public void stopAll(Sound type) {
         for(int i = 0; i < sources.length; ++i) {
             if(sourceSound[i] == type) {
